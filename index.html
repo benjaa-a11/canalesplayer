@@ -1,69 +1,183 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <title>Reproductor Android</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0a0a0a" />
-    <link rel="stylesheet" href="./styles.css" />
 
-     JWPlayer (para HLS/DASH y ClearKey) 
+<head>
+    <meta charset="UTF-8" />
+    <title>plan-b-player</title>
+    <meta content="noindex, nofollow, noarchive" name="robots" />
+    <meta name="referrer" content="no-referrer" />
+    <link rel="shortcut icon" href="../img/icono.webp" type="image/x-icon" />
     <script src="https://ssl.p.jwpcdn.com/player/v/8.26.0/jwplayer.js"></script>
     <script>
-      // Clave del ejemplo original; reemplaza por la tuya si tienes una
-      try { jwplayer.key = "XSuP4qMl+9tK17QNb+4+th2Pm9AWgMO/cYH8CI0HGGr7bdjo"; } catch(e) {}
+        jwplayer.key = "XSuP4qMl+9tK17QNb+4+th2Pm9AWgMO/cYH8CI0HGGr7bdjo";
     </script>
+    <link rel="stylesheet" href="style-jw.css">
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+        }
+        :root {
+            --colorbarra: #51E0C0;
+            --coloriconos: #f0f0f0;
+            --colorSeleccion1: #01CD7C;
+            --colorSeleccion2: #00FF6A;
+            --colorSeleccion3: #00FFB0;
+        }
+        .jw-button-container .jw-icon {
+            color: var(--coloriconos) !important;
+        }
+        .jw-slider-container .jw-progress {
+            background-color: var(--colorbarra) !important;
+        }
+        .jw-icon:hover {
+            color: var(--colorbarra) !important;
+        }
+        .jw-featured,
+        .jw-rightclick {
+            display: none !important;
+        }
+        .jw-controlbar{
+            display: none !important;
+        }
+        #player {
+            width: 100vw;
+            height: 100vh;
+            background: black;
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+</head>
 
-     Config remota de canales/servidores (de tu HTML original) 
+<body>
+    <div id="player"></div>
+
+<button id="fullscreen-btn" 
+   style="
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 10;
+    color: #000000;
+    border: none;
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+">⛶</button>
+
     <script src="https://canalesonline.netlify.app/servidores/zonahack-canales.js"></script>
+    <script>
+        // Solo mostrar el canal actual, sin selección ni servidores
+        function getParameterByName(name) {
+            name = name.replace(/[\[\]]/g, "\\$&");
+            var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+                results = regex.exec(window.location.href);
+            if (!results) return null;
+            if (!results[2]) return '';
+            return decodeURIComponent(results[2].replace(/\+/g, " "));
+        }
 
-     Hls.js solo para fallback cuando JW no puede reproducir un .m3u8 (Error 102630, etc.) 
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  </head>
-  <body>
-    <main id="app" class="app">
-       Superficie del reproductor 
-      <div id="player" class="player-surface" aria-label="Reproductor de video"></div>
+        const keys = Object.keys(ConfiguracionCanales);
+        let canalActual = keys.indexOf(getParameterByName('id')) >= 0 ? keys.indexOf(getParameterByName('id')) : 0;
 
-       Barra superior 
-      <header class="topbar">
-        <div class="title" id="title">Canal</div>
-        <div class="actions">
-          <button id="btn-servers" class="btn ghost" aria-controls="sheet" aria-expanded="false">
-            Servidores
-          </button>
-          <button id="btn-fullscreen" class="btn ghost" aria-label="Pantalla completa">
-            Pantalla completa
-          </button>
-        </div>
-      </header>
+        function cargarCanalPorIndex(index) {
+            const canalKey = keys[index];
+            const config = ConfiguracionCanales[canalKey];
+            const servidor = config.servidores?.[0] || config;
 
-       Indicador para orientación 
-      <div class="orientation-hint portrait-only" role="status" aria-live="polite">
-        Gira el dispositivo o usa pantalla completa para ver en horizontal.
-      </div>
+            const player = document.getElementById("player");
+            player.innerHTML = "";
 
-       Hoja inferior de servidores 
-      <div id="sheet" class="sheet" role="dialog" aria-modal="true" aria-label="Servidores disponibles">
-        <div class="sheet-handle" aria-hidden="true"></div>
-        <div class="sheet-header">
-          <div class="sheet-title">Servidores disponibles</div>
-          <button id="btn-close-sheet" class="btn icon" aria-label="Cerrar">✕</button>
-        </div>
-        <div id="servers-grid" class="servers-grid" role="list"></div>
-        <div class="sheet-footer">Desliza hacia abajo para cerrar</div>
-      </div>
+            const url = servidor.url;
+            const k1 = servidor.k1;
+            const k2 = servidor.k2;
 
-       Capa para cerrar la hoja (backdrop) 
-      <div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
+            if (url.includes('.m3u8') || url.includes('.mpd')) {
+                const sources = [];
+                if (url.includes('.m3u8') || (url.includes('.mpd') && !k1 && !k2)) {
+                    sources.push({ file: url });
+                }
+                if (url.includes('.mpd') && k1 && k2) {
+                    sources.push({
+                        file: url,
+                        drm: {
+                            "clearkey": {
+                                keyId: k1,
+                                key: k2
+                            }
+                        }
+                    });
+                }
+                jwplayer("player").setup({
+                    playlist: [{
+                        title: canalKey,
+                        description: "",
+                        sources: sources
+                    }],
+                    width: "100%",
+                    height: "100%",
+                    autostart: true,
+                    mute: false,
+                    sharing: {},
+                    androidhls: true,
+                    displaytitle: true,
+                    stretching: "uniform",
+                    preload: "auto",
+                    liveSyncDuration: 3
+                });
+            } else {
+                player.innerHTML = `
+                    <iframe 
+                        src="${url}" 
+                        width="100%" height="100%" scrolling="no" frameborder="0" allowfullscreen 
+                        allow="autoplay; fullscreen; picture-in-picture clipboard-write; encrypted-media" 
+                        loading="lazy"
+                    ></iframe>
+                `;
+            }
+        }
 
-       Estado vacío cuando falta ?id= 
-      <div id="empty-state" class="empty" hidden>
-        <h2>Falta el parámetro ?id=</h2>
-        <p>Abre este reproductor usando un link con <strong>?id=&lt;canal&gt;</strong></p>
-      </div>
-    </main>
+        cargarCanalPorIndex(canalActual);
 
-    <script src="./player.js"></script>
-  </body>
+
+        // Botón de pantalla completa
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    fullscreenBtn.addEventListener('click', function () {
+        const player = document.getElementById('player');
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        } else {
+            if (player.requestFullscreen) {
+                player.requestFullscreen();
+            } else if (player.webkitRequestFullscreen) {
+                player.webkitRequestFullscreen();
+            } else if (player.msRequestFullscreen) {
+                player.msRequestFullscreen();
+            }
+        }
+    });
+
+        // Manejar el evento de cambio de pantalla completa
+        document.addEventListener('fullscreenchange', function () {
+            if (document.fullscreenElement) {
+                fullscreenBtn.textContent = '⏎'; // Cambiar a icono de salir
+            } else {
+                fullscreenBtn.textContent = '⛶'; // Cambiar a icono de pantalla completa
+            }
+        });
+    </script>
+</body>
+
 </html>
