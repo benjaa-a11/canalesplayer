@@ -57,26 +57,6 @@
 
 <body>
     <div id="player"></div>
-
-<button id="fullscreen-btn" 
-   style="
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 10;
-    color: #000000;
-    border: none;
-    border-radius: 50%;
-    width: 56px;
-    height: 56px;
-    font-size: 28px;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-">⛶</button>
-
     <script src="https://canalesonline.netlify.app/servidores/zonahack-canales.js"></script>
     <script>
         // Solo mostrar el canal actual, sin selección ni servidores
@@ -151,32 +131,6 @@
 
         cargarCanalPorIndex(canalActual);
 
-
-        // Botón de pantalla completa
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
-    fullscreenBtn.addEventListener('click', function () {
-        const player = document.getElementById('player');
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        } else {
-            if (player.requestFullscreen) {
-                player.requestFullscreen();
-            } else if (player.webkitRequestFullscreen) {
-                player.webkitRequestFullscreen();
-            } else if (player.msRequestFullscreen) {
-                player.msRequestFullscreen();
-            }
-        }
-    });
-
-        // Manejar el evento de cambio de pantalla completa
-        document.addEventListener('fullscreenchange', function () {
-            if (document.fullscreenElement) {
-                fullscreenBtn.textContent = '⏎'; // Cambiar a icono de salir
-            } else {
-                fullscreenBtn.textContent = '⛶'; // Cambiar a icono de pantalla completa
-            }
-        });
     </script>
 </body>
 
